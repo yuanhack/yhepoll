@@ -1,7 +1,22 @@
 #ifndef __RCYH_YHSOCKET_H__
 #define __RCYH_YHSOCKET_H__
-#ifdef __cplusplus
 
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+#include <errno.h>
+#include <string.h>
+#include <stddef.h>
+#include <fcntl.h>
+#include <time.h>
+
+#ifdef __cplusplus
 extern "C"
 {
 #endif
@@ -9,15 +24,6 @@ extern "C"
 #ifndef _REENTRANT
 	#define _REENTRANT
 #endif
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <errno.h>
-#include <string.h>
-#include <unistd.h>
 
 // create socket server of version TCP/IPv4
 //-
@@ -73,6 +79,9 @@ int create_socket_v4_connect(int family, int type,
 #define create_udp_v4_connect(p_ip_addr,port) \
 		create_socket_v4_connect(AF_INET, SOCK_DGRA, p_ip_addr, port)
 
+int unix_domain_listen(const char *name);
+int unix_domain_accept(int listenfd, uid_t *uidptr);
+int unix_domain_connect(const char *name);
 
 int nsend(int fd, const void *p_data, size_t len, int flag);
 int nrecv(int fd, void *buff, size_t len, int flag);
@@ -194,4 +203,3 @@ int read_block(int fd, char *buff, int *bufflen,
 }
 #endif
 #endif /* __RCYH_YHSOCKET_H__ */
-

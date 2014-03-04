@@ -4,12 +4,13 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include "yhepoll.h"
+#include "unpipc.h"
 
 fd_event * fd_event_new()
 {
     fd_event * fe = (fd_event*)calloc(1, sizeof(fd_event));
     if (fe == 0) {
-        printf("fd_event_new() calloc error: %s\n",strerror(errno));
+        err_ret("fd_event_new() calloc error[%d]", errno);
         return 0;
     }
     fe->heap = FD_EVENT_MAGIC_HEAP;  // 堆申请标志
@@ -72,22 +73,22 @@ void fd_event_unset(fd_event *fe, int event)
 int em_fd_event_add(fd_event* fe)
 {
     int ret = epoll_ctl(fe->em->epfd, EPOLL_CTL_ADD, fe->fd, &fe->event);
-    if (ret < 0) printf("em_fd_event_add() epoll_ctl %d fd %d error: %s\n"
-            , fe->em->epfd, fe->fd, strerror(errno));
+    if (ret < 0) err_ret("em_fd_event_add() epoll_ctl %d fd %d error[%d]"
+            , fe->em->epfd, fe->fd, errno);
     return ret;
 }
 int em_fd_event_mod(fd_event* fe)
 {
     int ret =  epoll_ctl(fe->em->epfd, EPOLL_CTL_MOD, fe->fd, &fe->event);
-    if (ret < 0) printf("em_fd_event_mod() epoll_ctl %d fd %d error: %s\n" 
-            , fe->em->epfd, fe->fd, strerror(errno));
+    if (ret < 0) err_ret("em_fd_event_mod() epoll_ctl %d fd %d error[%d]"
+            , fe->em->epfd, fe->fd, errno);
     return ret;
 }
 int em_fd_event_del(fd_event* fe)
 {
     int ret = epoll_ctl(fe->em->epfd, EPOLL_CTL_DEL, fe->fd, &fe->event);
-    if (ret < 0) printf("em_fd_event_del() epoll_ctl %d fd %d error: %s\n"
-            , fe->em->epfd, fe->fd, strerror(errno));
+    if (ret < 0) err_ret("em_fd_event_del() epoll_ctl %d fd %d error[%d]"
+            , fe->em->epfd, fe->fd, errno);
     return ret;
 }
 void Em_fd_event_add(fd_event* fe)
@@ -111,12 +112,12 @@ int setfd_nonblock(int fd)
 {
     int status;
     if ((status = fcntl(fd, F_GETFL)) < 0) { 
-        printf("setfd_nonblock() fcntl F_GETFL error: %s\n", strerror(errno)); 
+        err_ret("setfd_nonblock() fcntl F_GETFL error[%d]", errno); 
         return -1; 
     }
     status |= O_NONBLOCK;
     if (fcntl(fd, F_SETFL, status) < 0) { 
-        printf("setfd_nonblock() fcntl F_SETFL error: %s\n", strerror(errno)); 
+        err_ret("setfd_nonblock() fcntl F_SETFL error[%d]", errno); 
         return -1; 
     }
     return 0;
@@ -125,8 +126,7 @@ int setsock_rcvtimeo(int fd, int second, int microsecond)
 {
     struct timeval rcv_timeo = {second, microsecond}; 
     if (setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&rcv_timeo,sizeof(rcv_timeo))< 0) {
-        printf("setsock_rcvtimeo() setsockopt SO_RCVTIMEO error: %s\n", 
-                strerror(errno));
+        err_ret("setsock_rcvtimeo() setsockopt SO_RCVTIMEO error[%d]", errno);
         return -1; 
     }
     return 0;
@@ -146,7 +146,7 @@ epoll_manager* em_open(int maxfds, int timeout,
     epoll_manager *em = 0; 
     if (maxfds <= 0) goto err_out;
     em = (epoll_manager*)calloc(1, sizeof(epoll_manager) + 
-                (maxfds+1) * sizeof(epoll_event));
+                (maxfds+1) * sizeof(struct epoll_event));
     em->timeout = timeout;
     em->maxfds  = maxfds + 1;   // +1 epoll manager cfd[0]
     em->before  = before;
@@ -174,7 +174,7 @@ epoll_manager* Em_open(int maxfds, int timeout,
 {
     epoll_manager *em;
     if ((em = em_open(maxfds, timeout, before, events, after)) == 0) 
-    { printf("Em_open() em_open error: %s\n", strerror(errno)); exit(1); }
+    { err_ret("Em_open() em_open error[%d]", errno); exit(1); }
     return em;
 }
 static void * em_thread(void *p)
@@ -214,8 +214,8 @@ int em_run(epoll_manager *em)
     em->run = 1;
     pthread_mutex_unlock(&em->lock);
     if ((ret = pthread_create(&em->tid, &attr, em_thread, em)) != 0) {
-        printf("em_start() pthread_create error: %s", strerror(ret));
         errno = ret;
+        err_ret("em_start() pthread_create error[%d]", errno);
         return -1;
     }
     pthread_attr_destroy(&attr);
@@ -234,10 +234,10 @@ int em_fd_event_notify(fd_event *fe, char ch, int flag)
     put[2].iov_base = &flag;  put[2].iov_len = sizeof(flag);
     int ret = writev(fe->em->cfd[1], put, 3);
     if (ret < 0) 
-        printf("em_fd_event_notify() writev [%d] [0x%08x:%d %c %d] error:%s\n"
-                , fe->em->cfd[1], (unsigned)fe, fe->fd,ch,flag,strerror(errno));
+        err_ret("em_fd_event_notify() writev [%d] [0x%08x:%d %c %d] error[%d]"
+                , fe->em->cfd[1], fe, fe->fd,ch,flag,errno);
 //    else
-//        printf("em_fd_event_notify() writev [%d] [0x%08x:%d %c %d] success\n"
+//        err_msg("em_fd_event_notify() writev [%d] [0x%08x:%d %c %d] success\n"
 //                , fe->em->cfd[1], (unsigned)fe, fe->fd, ch, flag);
     return ret;
 
@@ -250,8 +250,8 @@ int em_notify(epoll_manager *em, char ch, int flag)
     put[1].iov_base = &ch;    put[1].iov_len = sizeof(char);
     put[2].iov_base = &flag;  put[2].iov_len = sizeof(int);
     int ret = writev(em->cfd[1], put, 3);
-    if (ret < 0) printf("em_notify() writev [%d] [%c] error:%s\n", 
-            em->cfd[1], ch, strerror(errno));
+    if (ret < 0) err_ret("em_notify() writev [%d] [%c] error[%d]",
+            em->cfd[1], ch, errno);
     return ret;
 }
 int em_stop(epoll_manager *em)
@@ -260,7 +260,7 @@ int em_stop(epoll_manager *em)
     pthread_mutex_lock(&em->lock);
     if (em->run > 0) {
         if ((ret = em_notify(em, 'S', 0)) < 0) { 
-            printf("em_stop() em_notify error:%s\n", strerror(errno));
+            err_ret("em_stop() em_notify error[%d]", errno);
             pthread_mutex_unlock(&em->lock); 
             return ret;
         }
@@ -281,7 +281,7 @@ int em_close(epoll_manager *em)
 {
     int ret = em_notify(em, 'C', 0);
     if (ret < 0)
-        printf("em_close() em_nitofy error:%s\n", strerror(errno));
+        err_ret("em_close() em_nitofy error[%d]", errno);
     return ret;
 }
 void Em_close(epoll_manager *em)
@@ -319,14 +319,13 @@ int em_close_event(epoll_manager *em)
     if (em            ) { free(em);}
     return 0;
 }
-#define EPOLL_EVENT_READV_ERR_EXIT(n)  \
+#define EPOLL_EVENT_READV_ERR_EXIT()  \
     do { \
-        printf("em_event_process() readv error:%s\n", strerror(errno)); \
-        exit((n)); \
+        err_sys("em_event_process() readv error[%d]", errno); \
     } while (0)
 #define EPOLL_EVENT_READV_ERR()  \
     do { \
-        printf("em_event_process() readv error:%s\n", strerror(errno)); \
+        err_ret("em_event_process() readv error[%d]", errno); \
     } while (0)
 //   fd_event的事件回调调用notify_em_fd_event_release, 此处需注意
 //     外部如果关闭fd后发送'R'到epoll manager清理时候调用

@@ -35,7 +35,7 @@ typedef void  (*em_callback)(const epoll_manager * const em);
 ///////////////////////////////////////////////////////////////////////////////
 
 #define FD_EVENT_MAGIC_HEAP   0x1234abcd             /* heap alloc flag */
-#define FD_EVENT_INITIALIZER  {-1,{0},0,0,0,0,0,0,0} /* Stack initialization */
+#define FD_EVENT_INITIALIZER  {-1,{0},0,0,0,0,0,0,0,0,0} /* Stack initialization */
 #define FD_EVENT_INIT         FD_EVENT_INITIALIZER
 // 栈上获取的使用此宏初始化, 然后在调用 fd_event_init 初始化
 // 堆上获取的直接调用 fd_event_init 初始化
@@ -54,6 +54,8 @@ typedef struct fd_event {
 	int fd;                     // file descriptor
 	struct epoll_event event;   
     epoll_manager       *em;    // epoll manager
+    void                *ptr;   // user data ptr, user alloc/free
+    char                clean;  // (be called notify_xxx_del/release)
 
     // heap  flag is FD_EVENT_MAGIC_HEAP
     // stack flag is 0 
@@ -65,7 +67,7 @@ typedef struct fd_event {
 	fd_event_callback  pri;
 	fd_event_callback  err;
 	fd_event_callback  hup;
-} fd_event, *fd_event_handle;
+} *fd_event_handle;
 
 /* * epoll manager object */
 typedef struct epoll_manager
@@ -109,7 +111,7 @@ epoll_manager* Em_open(int maxfds, int timeout,
 #else
 epoll_manager* em_open(int maxfds, int timeout, 
         em_callback before, em_callback events, em_callback after);
-epoll_manager* Em_open(int maxfds, int timeout,
+epoll_manager* Em_open(int maxfds, int timeout, 
         em_callback before, em_callback events, em_callback after);
 #endif
 void Em_run(epoll_manager *em);

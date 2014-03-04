@@ -6,6 +6,10 @@
 #include "yhepoll.h"
 #include "yhsocket.h"
 
+// Author: Hong Yuan
+// Data  : 2014年 02月 20日 星期四 18:00:16 CST
+// COMM  : Nothing
+
 void client_in (fd_event *ptr);
 void client_err(fd_event *ptr);
 void client_hup(fd_event *ptr);
@@ -42,7 +46,7 @@ void client_new(epoll_manager *em, int fd)
 	fd_event *pfh = fd_event_new();
 	fd_event_init(pfh, em, fd);
 	fd_event_set(pfh, EPOLLIN,  client_in);
-	fd_event_set(pfh, EPOLLET);
+	fd_event_set(pfh, EPOLLET, 0);
 	//fd_event_set(pfh, EPOLLERR, client_err); // 不会被触发
 	//fd_event_set(pfh, EPOLLHUP, client_hup); // 不会被触发
     //setsock_rcvtimeo(fd, 5, 0); //非阻塞模式中接收超时事件底层不捕获,
@@ -194,7 +198,7 @@ main(int argc, char **argv)
 
     /*
     // demo 4: timer
-    //  epoll 好像不支持磁盘普通文件的写事件侦测么？ 
+    //  epoll 好像不支持磁盘普通文件的写事件侦测 
     //    EPOLL_CTL_ADD普通文件失败了
     //    所以此处采用了域套接字
     int _virtual_fd_[2];
