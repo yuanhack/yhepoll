@@ -4,7 +4,7 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include "yhepoll.h"
-#include "unpipc.h"
+#include "error.h"
 
 fd_event * fd_event_new()
 {
