@@ -1,0 +1,37 @@
+### git's track ignore file-list.
+### ctags and cscope files
+tags
+cscope.in.out
+cscope.out
+cscope.po.out
+
+### Source Insight files
+*.IAB
+*.IAD
+*.IMB
+*.IMD
+*.PFI
+*.PO
+*.PR
+*.PRI
+*.PS
+*.WK3
+*.SearchResults
+
+### SlickEdit files
+*.vpwhist
+*.vtg
+*.vpj
+*.vpw
+
+*.o
+*.a
+*.bak
+*~
+*.so
+*.log
+*.gz
+*.bz2
+lib/
+include
+out_demo

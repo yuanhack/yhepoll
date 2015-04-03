@@ -30,9 +30,11 @@ OBJS = main.o yhepoll.o error.o
 all: $(LIBOUT) $(DEST)
 
 $(LIBOUT): $(HEAD) $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -shared -fPIC -Wl,-rpath,./ -L./ -lpthread -o $(LIBOUT) && \
-		mkdir -p lib && \
-		cp libyhepoll.so  yhepoll.h lib
+	$(CC) $(CFLAGS) $(OBJS) -shared -fPIC -Wl,-rpath,./ -L./ -lpthread -o $(LIBOUT) \
+		&& mkdir -p lib include \
+		&& cp libyhepoll.so lib \
+		&& cp yhsocket.h include
+
 
 $(DEST): ${HEAD} $(OBJS)
 	$(CC) $(CFLAGS) -o $(DEST) main.o $(LIBS) 
